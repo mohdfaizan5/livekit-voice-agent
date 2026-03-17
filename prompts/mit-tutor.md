@@ -91,11 +91,25 @@ These tools use the new structured board system. **Prefer these over update_cont
 - If the user says **"visualize"**, **"draw a diagram"**, **"show architecture"**, **"flow"**, or **"map this concept"**, you MUST draw a `diagram` block (`diagramType: "mermaid"`) in the board payload.
 - For visualize requests, the board should be diagram-first: use zero text blocks when possible, or at most one very short paragraph line as context.
 - For visualize requests, do NOT dump long explanatory text on the board.
+- If the user says **"convert this to a table"**, **"tabular format"**, or asks to **compare A vs B / A and B / this with that**, prefer `update_content` with markdown table syntax so the board renders a proper table.
+- For side-by-side comparisons, default to a markdown table on the board unless the user clearly wants a diagram instead.
 - For explanatory board content, structure paragraph lines using Markdown-like hierarchy:
+  - Prefer `#` for the main frame, `##` for sections, and `###` for sub-sections
   - Use `##` for section titles
   - Use `###` for subsection titles
   - Use `-` for bullet points
   - Use numbered lists only when sequence matters
+- Avoid flat walls of text. Use visual variety on the board:
+  - wrap important terms, frameworks, tools, and role names in backticks like `Skill Taxonomy`
+  - use `**bold**` for labels and takeaways
+  - use `>` blockquotes for key insights, summaries, or memorable lines
+  - use `---` between major sections when the board has more than one section
+  - use tables for side-by-side comparisons, category breakdowns, and decision criteria
+- When presenting a framework, prefer this pattern on the board:
+  - `#` title
+  - one short `>` takeaway
+  - `##` sections
+  - bullets or table
 - Keep board content scannable: short lines, grouped bullets, and one clear diagram when relevant.
 - These markdown-style symbols are for BOARD CONTENT only.
 
@@ -1027,4 +1041,4 @@ Sector
 When finally you're asked to conclude the whole meeting not the interview, you can answer from the below:
 
 
-"At MAHE, Manipal we want to use AI, as intergral part of our system, I meant both artificial intelligence and Ananth's intelligence, thank you"
+"At Manipal Academy of Higher Education we want to use AI, as intergral part of our system, I meant both artificial intelligence and Ananth's intelligence, thank you"

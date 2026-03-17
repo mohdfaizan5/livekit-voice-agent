@@ -10,7 +10,7 @@ This is the slim orchestration layer.  All business logic lives in:
 """
 
 import logging
-from livekit.agents import llm, stt, tts
+from livekit.agents import llm
 from livekit import rtc
 from livekit.agents import (
     APIConnectOptions,
@@ -28,6 +28,11 @@ from livekit.plugins.turn_detector.multilingual import MultilingualModel
 from config import AGENT_NAME, models
 from agents import PiTutorAgent, SessionData
 from helpers.db import create_db_pool, close_db_pool
+from helpers.model_fallbacks import (
+    describe_fallback_chains,
+    llm_model_chain,
+    stt_fallback_descriptors,
+)
 
 logger = logging.getLogger("agent-UnlockPi")
 
@@ -57,43 +62,41 @@ async def entrypoint(ctx: JobContext):
     # 2. Shared session state (accessible in tools via context.userdata)
     session_data = SessionData(db_pool=db_pool)
 
+    async def on_job_shutdown(reason: str) -> None:
+        logger.info("Job shutting down", extra={"shutdown_reason": reason})
+        await close_db_pool(db_pool)
+
+    ctx.add_shutdown_callback(on_job_shutdown)
+
+    llm_chain = [
+        inference.LLM(model=model_name)
+        for model_name in llm_model_chain(models.llm)
+    ]
+    configured_fallbacks = describe_fallback_chains(models.stt, models.llm, models.tts)
+    logger.info("Configured model fallbacks: %s", configured_fallbacks)
+
     # 3. Voice pipeline
     session = AgentSession[SessionData](
         userdata=session_data,
         stt=inference.STT(
             model=models.stt.model,
             language=models.stt.language,
+            fallback=list(stt_fallback_descriptors(models.stt)),
             conn_options=APIConnectOptions(
                 max_retry=8,
                 retry_interval=2.0,
                 timeout=15.0,
             ),
         ),
-        llm=inference.LLM(model=models.llm.model),
+        llm=llm.FallbackAdapter(
+            llm=llm_chain,
+        ),
         tts=inference.TTS(
             model=models.tts.model,
             voice=models.tts.voice,
             language=models.tts.language,
-            
+            fallback=list(models.tts.fallback_models),
         ),
-    #       llm=llm.FallbackAdapter(
-    #     [
-    #         "openai/gpt-4.1-mini",
-    #         "google/gemini-2.5-flash",
-    #     ]
-    # ),
-    # stt=stt.FallbackAdapter(
-    #     [
-    #         "deepgram/nova-3",
-    #         "assemblyai/universal-streaming"
-    #     ]
-    # ),
-    # tts=tts.FallbackAdapter(
-    #     [
-    #         "cartesia/sonic-2:a167e0f3-df7e-4d52-a9c3-f949145efdab",
-    #         "inworld/inworld-tts-1",
-    #     ]
-    # ),
         turn_detection=MultilingualModel(),
         vad=ctx.proc.userdata["vad"],
         preemptive_generation=True,
@@ -113,12 +116,6 @@ async def entrypoint(ctx: JobContext):
             ),
         ),
     )
-
-    # 5. Cleanup on disconnect
-    @ctx.room.on("disconnected")
-    async def on_room_disconnected():
-        await close_db_pool(db_pool)
-
 
 if __name__ == "__main__":
     cli.run_app(server)

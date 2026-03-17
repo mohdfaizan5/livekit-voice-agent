@@ -12,6 +12,15 @@ from dotenv import load_dotenv
 load_dotenv(".env.local")
 
 
+def _csv_env(name: str, default: tuple[str, ...]) -> tuple[str, ...]:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+
+    items = tuple(item.strip() for item in value.split(",") if item.strip())
+    return items or default
+
+
 # ---------------------------------------------------------------------------
 # Environment
 # ---------------------------------------------------------------------------
@@ -29,21 +38,38 @@ AGENT_NAME = "UnlockPi"
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
 class STTConfig:
-    model: str = "assemblyai/universal-streaming-multilingual"
-    # model: str = "cartesia/ink-whisper"
-    language: str = "en-IN"
+    model: str = field(default_factory=lambda: os.environ.get("LIVEKIT_STT_MODEL", "assemblyai/universal-streaming-multilingual"))
+    language: str = field(default_factory=lambda: os.environ.get("LIVEKIT_STT_LANGUAGE", "en-IN"))
+    fallback_models: tuple[str, ...] = field(
+        default_factory=lambda: _csv_env(
+            "LIVEKIT_STT_FALLBACK_MODELS",
+            ("assemblyai/universal-streaming-multilingual", "cartesia/ink-whisper"),
+        )
+    )
 
 
 @dataclass(frozen=True)
 class LLMConfig:
-    model: str = "openai/gpt-4.1-mini"
+    model: str = field(default_factory=lambda: os.environ.get("LIVEKIT_LLM_MODEL", "openai/gpt-4.1-mini"))
+    fallback_models: tuple[str, ...] = field(
+        default_factory=lambda: _csv_env(
+            "LIVEKIT_LLM_FALLBACK_MODELS",
+            ("openai/gpt-4.1-mini","google/gemini-2.5-flash",),
+        )
+    )
 
 
 @dataclass(frozen=True)
 class TTSConfig:
-    model: str = "inworld/inworld-tts-1-max"
-    voice: str = "Arjun"
-    language: str = "en"
+    model: str = field(default_factory=lambda: os.environ.get("LIVEKIT_TTS_MODEL", "inworld/inworld-tts-1-max"))
+    voice: str = field(default_factory=lambda: os.environ.get("LIVEKIT_TTS_VOICE", "Arjun"))
+    language: str = field(default_factory=lambda: os.environ.get("LIVEKIT_TTS_LANGUAGE", "en"))
+    fallback_models: tuple[str, ...] = field(
+        default_factory=lambda: _csv_env(
+            "LIVEKIT_TTS_FALLBACK_MODELS",
+            ("cartesia/sonic-3:9626c31c-bec5-4cca-baa8-f8ba9e84c8bc",),
+        )
+    )
 # @dataclass(frozen=True)
 # class TTSConfig:
 #     model: str = "elevenlabs/eleven_turbo_v2_5"
