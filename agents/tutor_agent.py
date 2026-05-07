@@ -1,7 +1,7 @@
 """
-PiTutorAgent — Dr. Kini simulation.
+PiTutorAgent — 
 
-Loads its system prompt from prompts/mit-tutor.md. Simulates Dr. Kini,
+Loads its system prompt from prompts/mit-tutor.md. Simulates as tutor for a live session, guiding the user through a structured learning experience based on provided session context (title, topic, goals, structure). Keeps track of lesson phases and goal coverage, and provides tools to update this information.
 Supports handoff to InterviewAgent for mock interviews.
 """
 
@@ -111,7 +111,7 @@ def _parse_phase_order(raw_structure: str | None) -> list[str]:
 
 class PiTutorAgent(Agent):
     """
-    Dr. Kini simulation agent. Engages as the visionary leader of manipal academy of higher education,
+    Engages as the visionary leader of manipal academy of higher education,
     discussing  education, careers,
     """
     # JUNK: runs cognitive tests, and manages team scores.
