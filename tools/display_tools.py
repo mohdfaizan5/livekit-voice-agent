@@ -10,8 +10,8 @@ import logging
 
 from livekit.agents import RunContext, function_tool
 
+from helpers.board_sync import reset_board_document
 from helpers.room_utils import get_frontend_identity, send_rpc
-from helpers.board_engine import create_empty_board
 
 logger = logging.getLogger("agent-UnlockPi")
 
@@ -103,7 +103,7 @@ async def update_content(
     try:
         # Keep backend session state aligned with legacy markdown mode so the
         # frontend does not continue preferring stale structured board content.
-        context.userdata.board_document = create_empty_board()
+        reset_board_document(context.userdata)
         await send_rpc("update_content", {"text": text}, frontend_id=frontend_id)
         return f"Updated the display with new content: '{text[:50]}...'"
 
