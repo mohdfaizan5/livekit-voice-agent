@@ -11,6 +11,7 @@ from tools.board_tools import (
     delete_board_line,
     clear_board_content,
 )
+from tools.lesson_control_tool import control_lesson  # lesson voice control — linked list course
 
 __all__ = [
     "highlight_text",
@@ -26,4 +27,5 @@ __all__ = [
     "insert_board_line",
     "delete_board_line",
     "clear_board_content",
+    "control_lesson",
 ]

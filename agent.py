@@ -84,6 +84,7 @@ async def entrypoint(ctx: JobContext):
             metadata_json = ""
 
     session_id: str | None = None
+    course_mode_active: bool = False
     if metadata_json:
         try:
             parsed_metadata = json.loads(metadata_json)
@@ -91,6 +92,13 @@ async def entrypoint(ctx: JobContext):
                 raw_session_id = parsed_metadata.get("session_id")
                 if isinstance(raw_session_id, str) and raw_session_id.strip():
                     session_id = raw_session_id.strip()
+                # course_mode: activate realtime pipeline for interactive lessons
+                course_mode_active = bool(parsed_metadata.get("course_mode", False))
+                if course_mode_active:
+                    session_data.course_mode = True
+                    raw_ctx = parsed_metadata.get("course_context", {})
+                    if isinstance(raw_ctx, dict):
+                        session_data.course_context = raw_ctx
         except Exception as err:
             logger.warning("Failed to parse job metadata JSON: %s", err)
 
@@ -145,38 +153,60 @@ async def entrypoint(ctx: JobContext):
     logger.info("Configured model fallbacks: %s", configured_fallbacks)
 
     # 3. Voice pipeline
-    session = AgentSession[SessionData](
-        userdata=session_data,
-        stt=inference.STT(
-            model=models.stt.model,
-            language=models.stt.language,
-            fallback=list(stt_fallback_descriptors(models.stt)),
-            conn_options=APIConnectOptions(
-                max_retry=1,
-                retry_interval=0.5,
-                timeout=6.0,
+    if course_mode_active:
+        # Course mode: single OpenAI Realtime model handles STT + LLM + TTS end-to-end.
+        # Low latency is critical so the student sees lesson updates instantly.
+        from livekit.plugins import openai as lk_openai
+
+        logger.info(
+            "course_mode active — using RealtimeModel(%s, voice=%s)",
+            models.realtime.model,
+            models.realtime.voice,
+        )
+        session = AgentSession[SessionData](
+            userdata=session_data,
+            llm=lk_openai.realtime.RealtimeModel(
+                model=models.realtime.model,
+                voice=models.realtime.voice,
+                temperature=0.7,
             ),
-        ),
-        llm=llm.FallbackAdapter(
-            llm=llm_chain,
-            attempt_timeout=2.5,
-            retry_interval=0.25,
-        ),
-        tts=inference.TTS(
-            model=models.tts.model,
-            voice=models.tts.voice,
-            language=models.tts.language,
-            fallback=list(models.tts.fallback_models),
-            conn_options=APIConnectOptions(
-                max_retry=1,
-                retry_interval=0.5,
-                timeout=6.0,
+            vad=ctx.proc.userdata["vad"],
+        )
+    else:
+        # Standard pipeline: AssemblyAI STT → GPT-4.1-mini → Inworld TTS.
+        # DO NOT MODIFY THIS BLOCK.
+        session = AgentSession[SessionData](
+            userdata=session_data,
+            stt=inference.STT(
+                model=models.stt.model,
+                language=models.stt.language,
+                fallback=list(stt_fallback_descriptors(models.stt)),
+                conn_options=APIConnectOptions(
+                    max_retry=1,
+                    retry_interval=0.5,
+                    timeout=6.0,
+                ),
             ),
-        ),
-        turn_detection=build_turn_detector(),
-        vad=ctx.proc.userdata["vad"],
-        preemptive_generation=True,
-    )
+            llm=llm.FallbackAdapter(
+                llm=llm_chain,
+                attempt_timeout=2.5,
+                retry_interval=0.25,
+            ),
+            tts=inference.TTS(
+                model=models.tts.model,
+                voice=models.tts.voice,
+                language=models.tts.language,
+                fallback=list(models.tts.fallback_models),
+                conn_options=APIConnectOptions(
+                    max_retry=1,
+                    retry_interval=0.5,
+                    timeout=6.0,
+                ),
+            ),
+            turn_detection=build_turn_detector(),
+            vad=ctx.proc.userdata["vad"],
+            preemptive_generation=True,
+        )
 
     @session.on("metrics_collected")
     def on_metrics_collected(ev) -> None:

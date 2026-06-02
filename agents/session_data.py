@@ -38,3 +38,8 @@ class SessionData:
     current_phase_index: int = 0
     lesson_goal_checklist: list[str] = field(default_factory=list)
     covered_goals: list[str] = field(default_factory=list)
+
+    # Course voice-control mode
+    # course_context holds: { "course": "linked-lists", "chapter": 1, "step": 0 }
+    course_mode: bool = False
+    course_context: dict = field(default_factory=dict)

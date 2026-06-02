@@ -30,6 +30,7 @@ from tools import (
     # insert_board_line,
     # delete_board_line,
     clear_board_content,
+    control_lesson,  # lesson voice control — linked list course
 )
 
 logger = logging.getLogger("agent-UnlockPi")
@@ -65,6 +66,7 @@ class PiTutorAgent(PromptDrivenAgent):
                 # start_cognitive_test,
                 # update_team_score,
                 # get_team_scores,
+                control_lesson,  # lesson voice control — linked list course
             ],
         )
 
@@ -79,7 +81,9 @@ class PiTutorAgent(PromptDrivenAgent):
         session_data = self.session.userdata
         initialize_lesson_state(session_data)
 
-        if any([
+        if getattr(session_data, "course_mode", False):
+            await self._apply_course_mode_instructions()
+        elif any([
             getattr(session_data, "session_title", None),
             getattr(session_data, "session_topic", None),
             getattr(session_data, "session_goals", None),
