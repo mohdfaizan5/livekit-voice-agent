@@ -27,6 +27,7 @@ from tools import (
     # insert_board_line,
     # delete_board_line,
     clear_board_content,
+    control_lesson,  # lesson voice control — linked list course
 )
 
 logger = logging.getLogger("agent-UnlockPi")
@@ -140,6 +141,7 @@ class PiTutorAgent(Agent):
                 # start_cognitive_test,
                 # update_team_score,
                 # get_team_scores,
+                control_lesson,  # lesson voice control — linked list course
             ],
         )
 
@@ -177,6 +179,28 @@ class PiTutorAgent(Agent):
 
         await self.update_instructions(f"{self._base_instructions}\n\n{context_block}\n\n{governance_block}")
 
+    async def _apply_course_mode_instructions(self) -> None:
+        session_data = self.session.userdata
+        ctx = session_data.course_context
+        course = ctx.get("course", "linked-lists")
+        chapter = ctx.get("chapter", 1)
+        step = ctx.get("step", 0)
+
+        course_block = (
+            "[COURSE VOICE CONTROL MODE]\n"
+            "You are controlling an interactive lesson component displayed on screen. "
+            "The student sees the lesson UI and speaks to navigate it.\n\n"
+            "RULES:\n"
+            "- Call control_lesson for EVERY navigation command the student speaks.\n"
+            "- Keep all spoken responses to ONE sentence — the student is watching the screen.\n"
+            "- Do not describe what is on screen unless the student asks.\n"
+            "- Do not repeat the action back to the student — the UI already shows it.\n"
+            "- If the student's intent is ambiguous, make a reasonable guess and call the tool.\n\n"
+            f"Current position: course={course}, chapter={chapter}, step={step}"
+        )
+
+        await self.update_instructions(f"{self._base_instructions}\n\n{course_block}")
+
     async def on_enter(self):
         """Called when the agent joins. Sends a short greeting."""
         session_data = self.session.userdata
@@ -185,7 +209,9 @@ class PiTutorAgent(Agent):
         session_data.lesson_phase_order = _parse_phase_order(getattr(session_data, "session_structure", None))
         session_data.current_phase_index = 0
 
-        if any([
+        if getattr(session_data, "course_mode", False):
+            await self._apply_course_mode_instructions()
+        elif any([
             getattr(session_data, "session_title", None),
             getattr(session_data, "session_topic", None),
             getattr(session_data, "session_goals", None),

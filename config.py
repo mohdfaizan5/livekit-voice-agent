@@ -80,6 +80,14 @@ class TTSConfig:
 @dataclass(frozen=True)
 class TurnDetectionConfig:
     model: str = field(default_factory=lambda: os.environ.get("LIVEKIT_TURN_DETECTION_MODEL", "english"))
+
+
+@dataclass(frozen=True)
+class RealtimeConfig:
+    """OpenAI Realtime model config — used only when course_mode is active."""
+    model: str = field(default_factory=lambda: os.environ.get("OPENAI_REALTIME_MODEL", "gpt-4o-realtime-preview"))
+    voice: str = field(default_factory=lambda: os.environ.get("OPENAI_REALTIME_VOICE", "alloy"))
+    # OPENAI_API_KEY — required for course_mode sessions; read automatically by the OpenAI SDK
 # @dataclass(frozen=True)
 # class TTSConfig:
 #     model: str = "elevenlabs/eleven_turbo_v2_5"
@@ -92,6 +100,7 @@ class ModelConfig:
     llm: LLMConfig = field(default_factory=LLMConfig)
     tts: TTSConfig = field(default_factory=TTSConfig)
     turn_detection: TurnDetectionConfig = field(default_factory=TurnDetectionConfig)
+    realtime: RealtimeConfig = field(default_factory=RealtimeConfig)
 
 
 # Default model configuration instance
