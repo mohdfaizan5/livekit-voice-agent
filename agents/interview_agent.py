@@ -6,24 +6,16 @@ Supports handoff back to PiTutorAgent when done.
 """
 # Conducts interviews in Dr. Kini's persona.
 
-import os
 import logging
 
-from livekit.agents import Agent, RunContext, function_tool
+from livekit.agents import RunContext, function_tool
 
-from config import PROMPTS_DIR
+from agents.persona import PromptDrivenAgent
 from tools import update_content, write_to_board, clear_board_content, render_visual
 
 logger = logging.getLogger("agent-UnlockPi")
 
-
-def _load_prompt(filename: str) -> str:
-    path = os.path.join(PROMPTS_DIR, filename)
-    with open(path, "r", encoding="utf-8") as f:
-        return f.read()
-
-
-class InterviewAgent(Agent):
+class InterviewAgent(PromptDrivenAgent):
     """
     Dr. Kini Interview Simulator.
     You take interview as Dr. Kini, a seasoned interviewer with a sharp eye for talent. 
@@ -36,7 +28,7 @@ class InterviewAgent(Agent):
         self._tutor_agent_cls = PiTutorAgent
 
         super().__init__(
-            instructions=_load_prompt("mit-interview.md"),
+            prompt_filename="mit-interview.md",
             chat_ctx=chat_ctx,
             tools=[
                 update_content,
